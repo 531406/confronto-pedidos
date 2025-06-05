@@ -1,3 +1,7 @@
 Flask==2.3.3
 PyMuPDF==1.23.7
+<<<<<<< HEAD
 flask-cors==4.0.0
+=======
+flask-cors==4.0.0
+>>>>>>> 11848c2c1499d59bb64ec281d5fa0413add9da79
