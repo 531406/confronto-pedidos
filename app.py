@@ -1,53 +1,52 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS  # Importando o CORS
-import fitz  # PyMuPDF para ler os arquivos PDF
+from flask_cors import CORS
+import fitz  # PyMuPDF
 
 app = Flask(__name__)
-CORS(app)  # Permite requisições de qualquer domínio
+CORS(app)
 
-# Função para extrair texto de um PDF
-def extract_text_from_pdf(pdf_file):
-    doc = fitz.open(pdf_file)
-    text = ""
-    for page in doc:
-        text += page.get_text()
-    return text
-
-# Rota principal para testar a API
 @app.route('/')
-def home():
+def hello():
     return "API de Confronto de Pedidos e Cargas"
 
-# Rota para processar o upload dos arquivos
+# Função para ler o conteúdo do arquivo PDF
+def ler_pdf(caminho_arquivo):
+    # Abrir o PDF com PyMuPDF
+    doc = fitz.open(caminho_arquivo)
+    texto = ""
+    
+    # Iterar sobre todas as páginas e extrair o texto
+    for pagina in doc:
+        texto += pagina.get_text()
+    
+    return texto
+
+# Endpoint para upload de arquivos
 @app.route('/upload', methods=['POST'])
 def upload_files():
-    resumo = request.files.get('resumo')  # Arquivo de resumo de carga
-    pedidos = request.files.getlist('pedidos')  # Vários arquivos de pedidos
-    vinculos = request.form.get('vinculos')  # Dados de vinculação de pedidos e rotas
+    # Verifica se os arquivos foram enviados
+    if 'resumo' not in request.files or 'pedidos' not in request.files:
+        return jsonify({'error': 'Arquivo de resumo ou pedidos não enviado.'}), 400
+    
+    resumo = request.files['resumo']
+    pedidos = request.files.getlist('pedidos')
 
-    # Se não houver arquivos ou vinculações, retorna um erro
-    if not resumo or not pedidos or not vinculos:
-        return jsonify({"error": "Dados incompletos"}), 400
-
-    # Extraindo o texto do Resumo de Carga (PDF)
-    resumo_text = extract_text_from_pdf(resumo)
-
-    pedidos_texts = []
-    for pedido in pedidos:
-        pedido_text = extract_text_from_pdf(pedido)
-        pedidos_texts.append(pedido_text)
-
-    # Aqui você pode implementar a lógica de comparação entre o resumo e os pedidos.
-    # No momento, vamos apenas simular o confronto e retornar o texto extraído.
-
+    # Salvar o arquivo resumo temporariamente para ler o conteúdo
+    resumo.save("resumo_temp.pdf")
+    
+    # Lendo o conteúdo do arquivo resumo
+    texto_resumo = ler_pdf("resumo_temp.pdf")
+    
+    # Aqui você pode processar o texto extraído conforme necessário
+    # Exibindo uma parte do conteúdo para teste
+    preview_texto_resumo = texto_resumo[:500]  # Exibindo os primeiros 500 caracteres
+    
+    # Retornar uma resposta com o conteúdo lido do PDF (apenas como exemplo)
     return jsonify({
-        "status": "Confronto realizado com sucesso",
-        "resumo_recebido": resumo.filename,
-        "resumo_texto": resumo_text[:500],  # Mostra os primeiros 500 caracteres do texto extraído
-        "quantidade_pedidos": len(pedidos),
-        "pedidos_texto": [pedido[:500] for pedido in pedidos_texts],  # Mostra os primeiros 500 caracteres de cada pedido
-        "vinculos": vinculos
+        'status': 'success',
+        'preview_resumo': preview_texto_resumo,
+        'total_pedidos': len(pedidos)
     })
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)  # Definindo o servidor para rodar na porta 5000
+    app.run(debug=True)

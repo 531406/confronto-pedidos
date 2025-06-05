@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Confronto de Pedidos e Rotas</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 50px auto;
+      background: #ffffff;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #333333;
+      margin-bottom: 30px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    label {
+      font-weight: bold;
+      color: #333;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    input[type="file"], input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .pair {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .pair input {
+      flex: 1;
+    }
+
+    button {
+      padding: 12px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s ease-in-out;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .btn-secondary {
+      background-color: #6c757d;
+    }
+
+    .btn-secondary:hover {
+      background-color: #5a6268;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Confronto de Pedidos e Rotas</h1>
+
+    <div class="section">
+      <label for="resumo-carga">Resumo de Carga (PDF)</label>
+      <input type="file" id="resumo-carga" accept="application/pdf" onchange="lerResumo()">
+    </div>
+
+    <div class="section">
+      <label for="pedidos">Pedidos (PDFs múltiplos)</label>
+      <input type="file" id="pedidos" multiple accept="application/pdf">
+    </div>
+
+    <div class="section">
+      <label>Relacionar Pedido com Rota</label>
+      <div id="pairs-container">
+        <div class="pair">
+          <input type="text" placeholder="Número do Pedido">
+          <input type="text" placeholder="Código da Rota">
+        </div>
+      </div>
+      <button class="btn-secondary" onclick="addPair()">Adicionar nova relação</button>
+    </div>
+
+    <div class="section" style="text-align: center;">
+      <button onclick="confrontar()">Confrontar</button>
+    </div>
+
+    <div class="section" id="resumo-preview">
+      <h3>Conteúdo do Resumo de Carga:</h3>
+      <p id="preview-texto"></p>
+    </div>
+  </div>
+
+  <script>
+    function addPair() {
+      const container = document.getElementById('pairs-container');
+      const div = document.createElement('div');
+      div.className = 'pair';
+      div.innerHTML = `
+        <input type="text" placeholder="Número do Pedido">
+        <input type="text" placeholder="Código da Rota">
+      `;
+      container.appendChild(div);
+    }
+
+    async function confrontar() {
+      const resumoFile = document.getElementById('resumo-carga').files[0];
+      const pedidosFiles = document.getElementById('pedidos').files;
+
+      const pairs = document.querySelectorAll('.pair');
+      const vinculos = [];
+
+      pairs.forEach(pair => {
+        const pedido = pair.children[0].value.trim();
+        const rota = pair.children[1].value.trim();
+        if (pedido && rota) {
+          vinculos.push({ pedido, rota });
+        }
+      });
+
+      if (!resumoFile || pedidosFiles.length === 0 || vinculos.length === 0) {
+        alert("Preencha todos os campos.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("resumo", resumoFile);
+      for (const file of pedidosFiles) {
+        formData.append("pedidos", file);
+      }
+      formData.append("vinculos", JSON.stringify(vinculos));
+
+      try {
+        const response = await fetch("https://confronto-pedidos.onrender.com/upload", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+        alert("✅ Resultado:\n\n" + JSON.stringify(data, null, 2));
+      } catch (error) {
+        alert("❌ Erro ao enviar dados: " + error.message);
+      }
+    }
+
+    async function lerResumo() {
+      const resumoFile = document.getElementById('resumo-carga').files[0];
+      const formData = new FormData();
+      formData.append("resumo", resumoFile);
+
+      try {
+        const response = await fetch("https://confronto-pedidos.onrender.com/upload", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+        document.getElementById('preview-texto').innerText = data.preview_resumo;
+      } catch (error) {
+        alert("❌ Erro ao ler o arquivo PDF: " + error.message);
+      }
+    }
+  </script>
+
+</body>
+</html>
