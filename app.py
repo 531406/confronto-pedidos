@@ -1,3 +1,4 @@
+import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import fitz  # PyMuPDF
@@ -48,5 +49,7 @@ def upload_files():
         'total_pedidos': len(pedidos)
     })
 
+# Garantir que a aplicação escute em qualquer IP e na porta definida pelo Render
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))  # Render define a variável de ambiente PORT
+    app.run(host="0.0.0.0", port=port)
